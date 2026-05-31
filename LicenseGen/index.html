@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="授权生成">
+<title>授权码生成器</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+    background: #f2f2f7;
+    color: #1c1c1e;
+    min-height: 100vh;
+    padding-bottom: 40px;
+  }
+
+  .nav {
+    background: rgba(242,242,247,0.92);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    padding: 56px 20px 12px;
+    text-align: center;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    border-bottom: 0.5px solid #c6c6c8;
+  }
+  .nav h1 { font-size: 17px; font-weight: 600; }
+
+  .content { padding: 20px 16px 0; }
+
+  .section {
+    background: #fff;
+    border-radius: 12px;
+    margin-bottom: 20px;
+    overflow: hidden;
+  }
+
+  .section-title {
+    font-size: 13px;
+    color: #6c6c70;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 0 16px;
+    margin-bottom: 6px;
+  }
+
+  .row {
+    display: flex;
+    align-items: center;
+    padding: 14px 16px;
+    border-bottom: 0.5px solid #e5e5ea;
+    gap: 12px;
+  }
+  .row:last-child { border-bottom: none; }
+
+  .row label {
+    font-size: 16px;
+    color: #1c1c1e;
+    flex-shrink: 0;
+    width: 70px;
+  }
+
+  .row input[type="text"],
+  .row input[type="number"] {
+    flex: 1;
+    border: none;
+    outline: none;
+    font-size: 16px;
+    color: #1c1c1e;
+    background: transparent;
+    text-align: right;
+    font-family: inherit;
+    min-width: 0;
+  }
+
+  .row input[type="text"]::placeholder { color: #c7c7cc; }
+
+  .date-row {
+    display: flex;
+    align-items: center;
+    padding: 14px 16px;
+    gap: 0;
+  }
+
+  .date-row label {
+    font-size: 16px;
+    color: #1c1c1e;
+    flex-shrink: 0;
+    width: 70px;
+  }
+
+  .date-inputs {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 2px;
+  }
+
+  .date-inputs input {
+    border: none;
+    outline: none;
+    font-size: 16px;
+    color: #1c1c1e;
+    background: transparent;
+    text-align: center;
+    font-family: inherit;
+    -webkit-appearance: none;
+  }
+
+  .date-inputs input.y { width: 56px; }
+  .date-inputs input.md { width: 36px; }
+  .date-inputs .sep { color: #8e8e93; font-size: 16px; padding: 0 1px; }
+
+  .generate-btn {
+    width: 100%;
+    padding: 16px;
+    background: #007aff;
+    color: #fff;
+    border: none;
+    border-radius: 12px;
+    font-size: 17px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-bottom: 20px;
+    -webkit-appearance: none;
+    transition: opacity 0.15s;
+  }
+  .generate-btn:active { opacity: 0.75; }
+
+  .result-section { display: none; }
+
+  .result-value {
+    font-family: "Courier New", monospace;
+    font-size: 13px;
+    color: #007aff;
+    flex: 1;
+    text-align: right;
+    word-break: break-all;
+    line-height: 1.5;
+    min-width: 0;
+  }
+
+  .copy-btn {
+    background: #e5e5ea;
+    border: none;
+    border-radius: 6px;
+    padding: 5px 12px;
+    font-size: 14px;
+    color: #1c1c1e;
+    cursor: pointer;
+    flex-shrink: 0;
+    margin-left: 8px;
+    -webkit-appearance: none;
+    transition: opacity 0.15s;
+  }
+  .copy-btn:active { opacity: 0.6; }
+
+  .toast {
+    position: fixed;
+    bottom: 80px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: rgba(0,0,0,0.75);
+    color: #fff;
+    padding: 10px 20px;
+    border-radius: 20px;
+    font-size: 14px;
+    opacity: 0;
+    transition: opacity 0.2s, transform 0.2s;
+    pointer-events: none;
+    white-space: nowrap;
+    z-index: 999;
+  }
+  .toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  .hint {
+    font-size: 13px;
+    color: #8e8e93;
+    text-align: center;
+    padding: 0 20px;
+    line-height: 1.6;
+    margin-bottom: 20px;
+  }
+</style>
+</head>
+<body>
+
+<div class="nav">
+  <h1>授权码生成器</h1>
+</div>
+
+<div class="content">
+
+  <p class="hint">填写申请码和到期日期，生成对应的授权码</p>
+
+  <!-- 申请码 -->
+  <p class="section-title">申请码</p>
+  <div class="section" style="margin-bottom:20px">
+    <div class="row">
+      <label>申请码</label>
+      <input type="text" id="localid" placeholder="32位hex，例如 7FB3..." maxlength="32"
+             autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false"
+             oninput="this.value=this.value.toUpperCase().replace(/[^0-9A-F]/g,'')">
+    </div>
+  </div>
+
+  <!-- 到期日期 -->
+  <p class="section-title">到期日期</p>
+  <div class="section" style="margin-bottom:20px">
+    <div class="date-row">
+      <label>到期日期</label>
+      <div class="date-inputs">
+        <input class="y" type="number" id="ey" value="2099" min="2024" max="2099">
+        <span class="sep">年</span>
+        <input class="md" type="number" id="em" value="12" min="1" max="12">
+        <span class="sep">月</span>
+        <input class="md" type="number" id="ed" value="31" min="1" max="31">
+        <span class="sep">日</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 生成按钮 -->
+  <button class="generate-btn" onclick="generate()">生成授权码</button>
+
+  <!-- 结果 -->
+  <div class="result-section" id="result-section">
+    <p class="section-title">生成结果</p>
+    <div class="section">
+      <div class="row">
+        <label style="width:56px">明文</label>
+        <span class="result-value" id="plain-out" style="color:#8e8e93"></span>
+      </div>
+      <div class="row" style="align-items:flex-start; padding-top:16px; padding-bottom:16px">
+        <label style="width:56px; padding-top:2px">授权码</label>
+        <span class="result-value" id="cipher-out"></span>
+        <button class="copy-btn" onclick="copyResult()" id="copy-btn">复制</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+function deriveKey(localId) {
+  const result = [];
+  for (const c of localId.toUpperCase()) {
+    const nib = parseInt(c, 16);
+    if (c >= '0' && c <= '9') {
+      result.push(nib % 2 === 0 ? nib + 0x11 : nib + 0x0F);
+    } else {
+      result.push(nib % 2 === 0 ? nib + 0x56 : nib + 0x58);
+    }
+  }
+  return result;
+}
+
+function bytesToWordArray(bytes) {
+  const words = [];
+  for (let i = 0; i < bytes.length; i += 4) {
+    words.push(
+      ((bytes[i]   || 0) << 24) | ((bytes[i+1] || 0) << 16) |
+      ((bytes[i+2] || 0) <<  8) |  (bytes[i+3] || 0)
+    );
+  }
+  return CryptoJS.lib.WordArray.create(words, bytes.length);
+}
+
+function pad2(n) { return String(n).padStart(2, '0'); }
+
+function today() {
+  const d = new Date();
+  return `${d.getFullYear()}${pad2(d.getMonth()+1)}${pad2(d.getDate())}`;
+}
+
+function generate() {
+  const lid = document.getElementById('localid').value.trim().toUpperCase();
+  if (lid.length !== 32 || !/^[0-9A-F]{32}$/.test(lid)) {
+    showToast('申请码必须是32位hex字符');
+    return;
+  }
+  const ey = parseInt(document.getElementById('ey').value);
+  const em = parseInt(document.getElementById('em').value);
+  const ed = parseInt(document.getElementById('ed').value);
+  if (!ey || !em || !ed) { showToast('请填写完整的到期日期'); return; }
+
+  const start = today();
+  const end   = `${ey}${pad2(em)}${pad2(ed)}`;
+  const plain = `P00${start}${end}0000`;
+
+  try {
+    const keyBytes = deriveKey(lid);
+    const ivBytes  = keyBytes.slice(8, 24);
+    const keyWA    = bytesToWordArray(keyBytes);
+    const ivWA     = bytesToWordArray(ivBytes);
+    const pt       = CryptoJS.enc.Utf8.parse(plain);
+    const enc      = CryptoJS.AES.encrypt(pt, keyWA, {
+      iv: ivWA, mode: CryptoJS.mode.CBC, padding: CryptoJS.pad.Pkcs7
+    });
+    const ct = enc.ciphertext.toString(CryptoJS.enc.Hex).toUpperCase();
+
+    document.getElementById('plain-out').textContent  = plain;
+    document.getElementById('cipher-out').textContent = ct;
+    document.getElementById('result-section').style.display = 'block';
+    document.getElementById('copy-btn').textContent = '复制';
+    window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+  } catch(e) {
+    showToast('生成失败: ' + e.message);
+  }
+}
+
+function copyResult() {
+  const ct = document.getElementById('cipher-out').textContent;
+  if (!ct) return;
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(ct).then(() => {
+      showToast('已复制到剪贴板');
+      document.getElementById('copy-btn').textContent = '✓ 已复制';
+      setTimeout(() => document.getElementById('copy-btn').textContent = '复制', 2000);
+    });
+  } else {
+    const ta = document.createElement('textarea');
+    ta.value = ct;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.focus(); ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    showToast('已复制到剪贴板');
+    document.getElementById('copy-btn').textContent = '✓ 已复制';
+    setTimeout(() => document.getElementById('copy-btn').textContent = '复制', 2000);
+  }
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2000);
+}
+</script>
+</body>
+</html>
