@@ -7,214 +7,90 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="授权生成">
 <title>授权码生成器</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-
   body {
     font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
-    background: #f2f2f7;
-    color: #1c1c1e;
-    min-height: 100vh;
-    padding-bottom: 40px;
+    background: #f2f2f7; color: #1c1c1e; min-height: 100vh; padding-bottom: 40px;
   }
-
   .nav {
-    background: rgba(242,242,247,0.92);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    padding: 56px 20px 12px;
-    text-align: center;
-    position: sticky;
-    top: 0;
-    z-index: 10;
+    background: rgba(242,242,247,0.92); backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px); padding: 56px 20px 12px;
+    text-align: center; position: sticky; top: 0; z-index: 10;
     border-bottom: 0.5px solid #c6c6c8;
   }
   .nav h1 { font-size: 17px; font-weight: 600; }
-
   .content { padding: 20px 16px 0; }
-
-  .section {
-    background: #fff;
-    border-radius: 12px;
-    margin-bottom: 20px;
-    overflow: hidden;
-  }
-
+  .section { background: #fff; border-radius: 12px; margin-bottom: 20px; overflow: hidden; }
   .section-title {
-    font-size: 13px;
-    color: #6c6c70;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    padding: 0 16px;
-    margin-bottom: 6px;
+    font-size: 13px; color: #6c6c70; text-transform: uppercase;
+    letter-spacing: 0.04em; padding: 0 16px; margin-bottom: 6px;
   }
-
   .row {
-    display: flex;
-    align-items: center;
-    padding: 14px 16px;
-    border-bottom: 0.5px solid #e5e5ea;
-    gap: 12px;
+    display: flex; align-items: center; padding: 14px 16px;
+    border-bottom: 0.5px solid #e5e5ea; gap: 12px;
   }
   .row:last-child { border-bottom: none; }
-
-  .row label {
-    font-size: 16px;
-    color: #1c1c1e;
-    flex-shrink: 0;
-    width: 70px;
+  .row label { font-size: 16px; color: #1c1c1e; flex-shrink: 0; width: 70px; }
+  .row input[type="text"] {
+    flex: 1; border: none; outline: none; font-size: 16px;
+    color: #1c1c1e; background: transparent; text-align: right;
+    font-family: inherit; min-width: 0;
   }
-
-  .row input[type="text"],
-  .row input[type="number"] {
-    flex: 1;
-    border: none;
-    outline: none;
-    font-size: 16px;
-    color: #1c1c1e;
-    background: transparent;
-    text-align: right;
-    font-family: inherit;
-    min-width: 0;
-  }
-
   .row input[type="text"]::placeholder { color: #c7c7cc; }
-
-  .date-row {
-    display: flex;
-    align-items: center;
-    padding: 14px 16px;
-    gap: 0;
-  }
-
-  .date-row label {
-    font-size: 16px;
-    color: #1c1c1e;
-    flex-shrink: 0;
-    width: 70px;
-  }
-
-  .date-inputs {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 2px;
-  }
-
+  .date-row { display: flex; align-items: center; padding: 14px 16px; }
+  .date-row label { font-size: 16px; color: #1c1c1e; flex-shrink: 0; width: 70px; }
+  .date-inputs { flex: 1; display: flex; align-items: center; justify-content: flex-end; gap: 2px; }
   .date-inputs input {
-    border: none;
-    outline: none;
-    font-size: 16px;
-    color: #1c1c1e;
-    background: transparent;
-    text-align: center;
-    font-family: inherit;
+    border: none; outline: none; font-size: 16px; color: #1c1c1e;
+    background: transparent; text-align: center; font-family: inherit;
     -webkit-appearance: none;
   }
-
   .date-inputs input.y { width: 56px; }
   .date-inputs input.md { width: 36px; }
   .date-inputs .sep { color: #8e8e93; font-size: 16px; padding: 0 1px; }
-
   .generate-btn {
-    width: 100%;
-    padding: 16px;
-    background: #007aff;
-    color: #fff;
-    border: none;
-    border-radius: 12px;
-    font-size: 17px;
-    font-weight: 600;
-    cursor: pointer;
-    margin-bottom: 20px;
-    -webkit-appearance: none;
-    transition: opacity 0.15s;
+    width: 100%; padding: 16px; background: #007aff; color: #fff;
+    border: none; border-radius: 12px; font-size: 17px; font-weight: 600;
+    cursor: pointer; margin-bottom: 20px; -webkit-appearance: none; transition: opacity 0.15s;
   }
   .generate-btn:active { opacity: 0.75; }
-
   .result-section { display: none; }
-
   .result-value {
-    font-family: "Courier New", monospace;
-    font-size: 13px;
-    color: #007aff;
-    flex: 1;
-    text-align: right;
-    word-break: break-all;
-    line-height: 1.5;
-    min-width: 0;
+    font-family: "Courier New", monospace; font-size: 13px; color: #007aff;
+    flex: 1; text-align: right; word-break: break-all; line-height: 1.5; min-width: 0;
   }
-
   .copy-btn {
-    background: #e5e5ea;
-    border: none;
-    border-radius: 6px;
-    padding: 5px 12px;
-    font-size: 14px;
-    color: #1c1c1e;
-    cursor: pointer;
-    flex-shrink: 0;
-    margin-left: 8px;
-    -webkit-appearance: none;
-    transition: opacity 0.15s;
+    background: #e5e5ea; border: none; border-radius: 6px; padding: 5px 12px;
+    font-size: 14px; color: #1c1c1e; cursor: pointer; flex-shrink: 0;
+    margin-left: 8px; -webkit-appearance: none; transition: opacity 0.15s;
   }
   .copy-btn:active { opacity: 0.6; }
-
   .toast {
-    position: fixed;
-    bottom: 80px;
-    left: 50%;
+    position: fixed; bottom: 80px; left: 50%;
     transform: translateX(-50%) translateY(20px);
-    background: rgba(0,0,0,0.75);
-    color: #fff;
-    padding: 10px 20px;
-    border-radius: 20px;
-    font-size: 14px;
-    opacity: 0;
-    transition: opacity 0.2s, transform 0.2s;
-    pointer-events: none;
-    white-space: nowrap;
-    z-index: 999;
+    background: rgba(0,0,0,0.75); color: #fff; padding: 10px 20px;
+    border-radius: 20px; font-size: 14px; opacity: 0;
+    transition: opacity 0.2s, transform 0.2s; pointer-events: none;
+    white-space: nowrap; z-index: 999;
   }
-  .toast.show {
-    opacity: 1;
-    transform: translateX(-50%) translateY(0);
-  }
-
-  .hint {
-    font-size: 13px;
-    color: #8e8e93;
-    text-align: center;
-    padding: 0 20px;
-    line-height: 1.6;
-    margin-bottom: 20px;
-  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .hint { font-size: 13px; color: #8e8e93; text-align: center; padding: 0 20px; line-height: 1.6; margin-bottom: 20px; }
 </style>
 </head>
 <body>
-
-<div class="nav">
-  <h1>授权码生成器</h1>
-</div>
-
+<div class="nav"><h1>授权码生成器</h1></div>
 <div class="content">
-
   <p class="hint">填写申请码和到期日期，生成对应的授权码</p>
-
-  <!-- 申请码 -->
   <p class="section-title">申请码</p>
   <div class="section" style="margin-bottom:20px">
     <div class="row">
       <label>申请码</label>
-      <input type="text" id="localid" placeholder="32位hex，例如 7FB3..." maxlength="32"
+      <input type="text" id="localid" placeholder="32位hex" maxlength="32"
              autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false"
              oninput="this.value=this.value.toUpperCase().replace(/[^0-9A-F]/g,'')">
     </div>
   </div>
-
-  <!-- 到期日期 -->
   <p class="section-title">到期日期</p>
   <div class="section" style="margin-bottom:20px">
     <div class="date-row">
@@ -229,11 +105,7 @@
       </div>
     </div>
   </div>
-
-  <!-- 生成按钮 -->
   <button class="generate-btn" onclick="generate()">生成授权码</button>
-
-  <!-- 结果 -->
   <div class="result-section" id="result-section">
     <p class="section-title">生成结果</p>
     <div class="section">
@@ -241,19 +113,136 @@
         <label style="width:56px">明文</label>
         <span class="result-value" id="plain-out" style="color:#8e8e93"></span>
       </div>
-      <div class="row" style="align-items:flex-start; padding-top:16px; padding-bottom:16px">
-        <label style="width:56px; padding-top:2px">授权码</label>
+      <div class="row" style="align-items:flex-start;padding-top:16px;padding-bottom:16px">
+        <label style="width:56px;padding-top:2px">授权码</label>
         <span class="result-value" id="cipher-out"></span>
         <button class="copy-btn" onclick="copyResult()" id="copy-btn">复制</button>
       </div>
     </div>
   </div>
-
 </div>
-
 <div class="toast" id="toast"></div>
 
 <script>
+// ── AES-CBC + PKCS7，纯原生JS实现，不依赖任何外部库 ──────────
+
+// S-box
+const SBOX = new Uint8Array([
+  99,124,119,123,242,107,111,197,48,1,103,43,254,215,171,118,
+  202,130,201,125,250,89,71,240,173,212,162,175,156,164,114,192,
+  183,253,147,38,54,63,247,204,52,165,229,241,113,216,49,21,
+  4,199,35,195,24,150,5,154,7,18,128,226,235,39,178,117,
+  9,131,44,26,27,110,90,160,82,59,214,179,41,227,47,132,
+  83,209,0,237,32,252,177,91,106,203,190,57,74,76,88,207,
+  208,239,170,251,67,77,51,133,69,249,2,127,80,60,159,168,
+  81,163,64,143,146,157,56,245,188,182,218,33,16,255,243,210,
+  205,12,19,236,95,151,68,23,196,167,126,61,100,93,25,115,
+  96,129,79,220,34,42,144,136,70,238,184,20,222,94,11,219,
+  224,50,58,10,73,6,36,92,194,211,172,98,145,149,228,121,
+  231,200,55,109,141,213,78,169,108,86,244,234,101,122,174,8,
+  186,120,37,46,28,166,180,198,232,221,116,31,75,189,139,138,
+  112,62,181,102,72,3,246,14,97,53,87,185,134,193,29,158,
+  225,248,152,17,105,217,142,148,155,30,135,233,206,85,40,223,
+  140,161,137,13,191,230,66,104,65,153,45,15,176,84,187,22
+]);
+
+// Rcon
+const RCON = new Uint8Array([
+  0x01,0x02,0x04,0x08,0x10,0x20,0x40,0x80,0x1b,0x36
+]);
+
+function xtime(a) { return ((a << 1) ^ ((a & 0x80) ? 0x1b : 0)) & 0xff; }
+
+function gmul(a, b) {
+  let p = 0;
+  for (let i = 0; i < 8; i++) {
+    if (b & 1) p ^= a;
+    const hi = a & 0x80;
+    a = (a << 1) & 0xff;
+    if (hi) a ^= 0x1b;
+    b >>= 1;
+  }
+  return p;
+}
+
+function keyExpansion(key) {
+  const nk = key.length / 4;
+  const nr = nk + 6;
+  const w = new Uint8Array(4 * (nr + 1) * 4);
+  w.set(key);
+  for (let i = nk; i < 4 * (nr + 1); i++) {
+    let t = [w[(i-1)*4], w[(i-1)*4+1], w[(i-1)*4+2], w[(i-1)*4+3]];
+    if (i % nk === 0) {
+      t = [SBOX[t[1]] ^ RCON[i/nk-1], SBOX[t[2]], SBOX[t[3]], SBOX[t[0]]];
+    } else if (nk > 6 && i % nk === 4) {
+      t = [SBOX[t[0]], SBOX[t[1]], SBOX[t[2]], SBOX[t[3]]];
+    }
+    for (let j = 0; j < 4; j++) w[i*4+j] = w[(i-nk)*4+j] ^ t[j];
+  }
+  return w;
+}
+
+function addRoundKey(state, w, round) {
+  for (let c = 0; c < 4; c++)
+    for (let r = 0; r < 4; r++)
+      state[r][c] ^= w[(round*4+c)*4+r];
+}
+
+function subBytes(s) {
+  for (let r = 0; r < 4; r++) for (let c = 0; c < 4; c++) s[r][c] = SBOX[s[r][c]];
+}
+
+function shiftRows(s) {
+  for (let r = 1; r < 4; r++) {
+    const t = s[r].slice();
+    for (let c = 0; c < 4; c++) s[r][c] = t[(c + r) % 4];
+  }
+}
+
+function mixColumns(s) {
+  for (let c = 0; c < 4; c++) {
+    const a = s[0][c], b = s[1][c], cc = s[2][c], d = s[3][c];
+    s[0][c] = gmul(a,2) ^ gmul(b,3) ^ cc ^ d;
+    s[1][c] = a ^ gmul(b,2) ^ gmul(cc,3) ^ d;
+    s[2][c] = a ^ b ^ gmul(cc,2) ^ gmul(d,3);
+    s[3][c] = gmul(a,3) ^ b ^ cc ^ gmul(d,2);
+  }
+}
+
+function aesEncryptBlock(block, w, nr) {
+  const s = [[],[],[],[]];
+  for (let r = 0; r < 4; r++) for (let c = 0; c < 4; c++) s[r][c] = block[r + 4*c];
+  addRoundKey(s, w, 0);
+  for (let round = 1; round < nr; round++) {
+    subBytes(s); shiftRows(s); mixColumns(s); addRoundKey(s, w, round);
+  }
+  subBytes(s); shiftRows(s); addRoundKey(s, w, nr);
+  const out = new Uint8Array(16);
+  for (let r = 0; r < 4; r++) for (let c = 0; c < 4; c++) out[r + 4*c] = s[r][c];
+  return out;
+}
+
+function aesCbcEncrypt(keyBytes, ivBytes, plainBytes) {
+  const nr = keyBytes.length === 16 ? 10 : keyBytes.length === 24 ? 12 : 14;
+  const w = keyExpansion(keyBytes);
+  // PKCS7 padding
+  const pad = 16 - (plainBytes.length % 16);
+  const padded = new Uint8Array(plainBytes.length + pad);
+  padded.set(plainBytes);
+  padded.fill(pad, plainBytes.length);
+  const ct = new Uint8Array(padded.length);
+  let prev = ivBytes.slice();
+  for (let i = 0; i < padded.length; i += 16) {
+    const block = new Uint8Array(16);
+    for (let j = 0; j < 16; j++) block[j] = padded[i+j] ^ prev[j];
+    const enc = aesEncryptBlock(block, w, nr);
+    ct.set(enc, i);
+    prev = enc;
+  }
+  return ct;
+}
+
+// ── key派生 ───────────────────────────────────────────────
 function deriveKey(localId) {
   const result = [];
   for (const c of localId.toUpperCase()) {
@@ -264,52 +253,41 @@ function deriveKey(localId) {
       result.push(nib % 2 === 0 ? nib + 0x56 : nib + 0x58);
     }
   }
-  return result;
-}
-
-function bytesToWordArray(bytes) {
-  const words = [];
-  for (let i = 0; i < bytes.length; i += 4) {
-    words.push(
-      ((bytes[i]   || 0) << 24) | ((bytes[i+1] || 0) << 16) |
-      ((bytes[i+2] || 0) <<  8) |  (bytes[i+3] || 0)
-    );
-  }
-  return CryptoJS.lib.WordArray.create(words, bytes.length);
+  return new Uint8Array(result);
 }
 
 function pad2(n) { return String(n).padStart(2, '0'); }
 
-function today() {
+function todayStr() {
   const d = new Date();
   return `${d.getFullYear()}${pad2(d.getMonth()+1)}${pad2(d.getDate())}`;
 }
 
+function toHex(bytes) {
+  return Array.from(bytes).map(b => b.toString(16).padStart(2,'0')).join('').toUpperCase();
+}
+
+// ── 生成 ──────────────────────────────────────────────────
 function generate() {
   const lid = document.getElementById('localid').value.trim().toUpperCase();
   if (lid.length !== 32 || !/^[0-9A-F]{32}$/.test(lid)) {
-    showToast('申请码必须是32位hex字符');
-    return;
+    showToast('申请码必须是32位hex字符'); return;
   }
-  const ey = parseInt(document.getElementById('ey').value);
-  const em = parseInt(document.getElementById('em').value);
-  const ed = parseInt(document.getElementById('ed').value);
+  const ey = document.getElementById('ey').value;
+  const em = document.getElementById('em').value;
+  const ed = document.getElementById('ed').value;
   if (!ey || !em || !ed) { showToast('请填写完整的到期日期'); return; }
 
-  const start = today();
-  const end   = `${ey}${pad2(em)}${pad2(ed)}`;
+  const start = todayStr();
+  const end   = `${ey}${pad2(parseInt(em))}${pad2(parseInt(ed))}`;
   const plain = `P00${start}${end}0000`;
 
   try {
-    const keyBytes = deriveKey(lid);
-    const ivBytes  = keyBytes.slice(8, 24);
-    const keyWA    = bytesToWordArray(keyBytes);
-    const ivWA     = bytesToWordArray(ivBytes);
-    const pt       = CryptoJS.enc.Utf8.parse(plain);
-    const enc      = CryptoJS.AES.encrypt(pt, keyWA, {
-      iv: ivWA, mode: CryptoJS.mode.CBC, padding: CryptoJS.pad.Pkcs7
-    });
-    const ct = enc.ciphertext.toString(CryptoJS.enc.Hex).toUpperCase();
+    const keyBytes  = deriveKey(lid);
+    const ivBytes   = keyBytes.slice(8, 24);
+    const ptBytes   = new TextEncoder().encode(plain);
+    const ctBytes   = aesCbcEncrypt(keyBytes, ivBytes, ptBytes);
+    const ct        = toHex(ctBytes);
 
     document.getElementById('plain-out').textContent  = plain;
     document.getElementById('cipher-out').textContent = ct;
@@ -332,13 +310,9 @@ function copyResult() {
     });
   } else {
     const ta = document.createElement('textarea');
-    ta.value = ct;
-    ta.style.position = 'fixed';
-    ta.style.opacity = '0';
-    document.body.appendChild(ta);
-    ta.focus(); ta.select();
-    document.execCommand('copy');
-    document.body.removeChild(ta);
+    ta.value = ct; ta.style.cssText = 'position:fixed;opacity:0';
+    document.body.appendChild(ta); ta.focus(); ta.select();
+    document.execCommand('copy'); document.body.removeChild(ta);
     showToast('已复制到剪贴板');
     document.getElementById('copy-btn').textContent = '✓ 已复制';
     setTimeout(() => document.getElementById('copy-btn').textContent = '复制', 2000);
@@ -347,8 +321,7 @@ function copyResult() {
 
 function showToast(msg) {
   const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
+  t.textContent = msg; t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), 2000);
 }
 </script>
