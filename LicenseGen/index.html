@@ -255,16 +255,7 @@ body {
 <body>
 
 <!-- Tab 导航 -->
-<div class="tab-bar">
-  <button class="active" id="tab-btn-keygen" onclick="switchTab('keygen', this)">
-    <span class="tab-icon">🔑</span>
-    <span class="tab-label">授权码生成</span>
-  </button>
-  <button id="tab-btn-license" onclick="switchTab('license', this)">
-    <span class="tab-icon">📄</span>
-    <span class="tab-label">授权文件生成</span>
-  </button>
-</div>
+ 
 
 <!-- Tab 1: 授权码生成 -->
 <div class="tab-page active" id="tab-keygen">
@@ -397,13 +388,13 @@ body {
   <button class="generate-btn" id="gen-btn" onclick="lic_generate()">生成授权文件</button>
 
   <!-- 结果 -->
-  <div id="result-section" style="display:none">
+  <div id="lic-result-section" style="display:none">
     <p class="section-title">生成结果</p>
     <div class="section">
       <div class="row" style="align-items:flex-start;padding-top:14px;padding-bottom:14px">
         <label style="padding-top:2px">授权内容</label>
-        <span class="result-val" id="result-preview"></span>
-        <button class="copy-btn" id="copy-btn" onclick="lic_copyResult()">复制</button>
+        <span class="result-val" id="lic-result-preview"></span>
+        <button class="copy-btn" id="lic-copy-btn" onclick="lic_copyResult()">复制</button>
       </div>
     </div>
     <button class="generate-btn" style="background:#34c759" onclick="downloadResult()">下载 .license 文件</button>
@@ -420,14 +411,7 @@ body {
 </div>
 
 <script>
-// ════ Tab 切换 ════════════════════════════════════════════
-function switchTab(name, btn) {
-  document.querySelectorAll('.tab-page').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.tab-bar button').forEach(b => b.classList.remove('active'));
-  document.getElementById('tab-' + name).classList.add('active');
-  btn.classList.add('active');
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-}
+ 
 
 
 // ════ 公共工具函数 ════════════════════════════════════════
@@ -637,20 +621,34 @@ function kg_generate() {
 function kg_copyResult() {
   const ct = document.getElementById('cipher-out').textContent;
   if (!ct) return;
-  if (navigator.clipboard) {
+  function fallbackCopy() {
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = ct;
+      ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;';
+      document.body.appendChild(ta);
+      ta.focus(); ta.select();
+      const ok = document.execCommand('copy');
+      document.body.removeChild(ta);
+      if (ok) {
+        showToast('已复制到剪贴板');
+        document.getElementById('copy-btn').textContent = '✓ 已复制';
+        setTimeout(() => document.getElementById('copy-btn').textContent = '复制', 2000);
+      } else {
+        showToast('复制失败，请手动复制');
+      }
+    } catch(e) {
+      showToast('复制失败: ' + e.message);
+    }
+  }
+  if (navigator.clipboard && window.isSecureContext) {
     navigator.clipboard.writeText(ct).then(() => {
       showToast('已复制到剪贴板');
       document.getElementById('copy-btn').textContent = '✓ 已复制';
       setTimeout(() => document.getElementById('copy-btn').textContent = '复制', 2000);
-    });
+    }).catch(() => fallbackCopy());
   } else {
-    const ta = document.createElement('textarea');
-    ta.value = ct; ta.style.cssText = 'position:fixed;opacity:0';
-    document.body.appendChild(ta); ta.focus(); ta.select();
-    document.execCommand('copy'); document.body.removeChild(ta);
-    showToast('已复制到剪贴板');
-    document.getElementById('copy-btn').textContent = '✓ 已复制';
-    setTimeout(() => document.getElementById('copy-btn').textContent = '复制', 2000);
+    fallbackCopy();
   }
 }
 
@@ -795,67 +793,7 @@ function signData(dataBase64) {
 }
 
 // ── 生成 ──────────────────────────────────────────────────
-function lic_generate() {
-  if (!window._requestFields) {
-    showToast('请先导入申请文件'); return;
-  }
-
-  // 收集表单
-  const companyName = document.getElementById('company_name').value.trim();
-  const companyAddr = document.getElementById('company_addr').value.trim();
-  const contact     = document.getElementById('contact').value.trim();
-  const email       = document.getElementById('email').value.trim();
-  const machineName = document.getElementById('machine_name').value.trim();
-  const licenseId2  = document.getElementById('license_id2').value.trim();
-
-  const requestFields = Object.assign({}, window._requestFields, {
-    Company:     companyAddr ? companyName + '\n' + companyAddr : companyName,
-    Contact:     contact,
-    Email:       email,
-    MachineName: machineName,
-    License_ID2: licenseId2,
-  });
-
-  const limitsFields = {
-    ExpirationDate: document.getElementById('expiration').value.trim(),
-    MaxStartups:    document.getElementById('max_startups').value.trim(),
-    MaxUpTime:      document.getElementById('max_uptime').value.trim(),
-  };
-
-  const template = TEMPLATES[licenseType];
-  if (!template) { showToast('未知权限类型'); return; }
-
-  // 显示loading（forge RSA4096签名需要约1-2秒）
-  document.getElementById('loading').classList.add('show');
-  document.getElementById('gen-btn').disabled = true;
-
-  // 异步执行避免阻塞UI
-  setTimeout(() => {
-    try {
-      const xmlContent = updateLicenseXml(template, requestFields, limitsFields);
-      const dataB64    = btoa(unescape(encodeURIComponent(xmlContent)));
-      const sig        = signData(dataB64);
-
-      resultContent = wrapBlock('INFOBLOCK', xmlContent)
-                    + wrapBlock('DATABLOCK', dataB64)
-                    + wrapBlock('SIGNATURE', sig);
-
-      // 显示预览（前80字符）
-      document.getElementById('result-preview').textContent = resultContent.substring(0, 120) + '...';
-      document.getElementById('result-section').style.display = 'block';
-      document.getElementById('copy-btn').textContent = '复制';
-      window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
-      showToast('授权生成成功！');
-    } catch(err) {
-      showToast('生成失败: ' + err.message);
-      console.error(err);
-    } finally {
-      document.getElementById('loading').classList.remove('show');
-      document.getElementById('gen-btn').disabled = false;
-    }
-  }, 50);
-}
-
+ 
 function wrapBlock(tag, content) {
   return `-----BEGIN-${tag}\n${content}\n-----END-${tag}\n`;
 }
@@ -863,18 +801,34 @@ function wrapBlock(tag, content) {
 // ── 复制/下载 ─────────────────────────────────────────────
 function lic_copyResult() {
   if (!resultContent) return;
-  if (navigator.clipboard) {
+  function fallbackCopy() {
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = resultContent;
+      ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;';
+      document.body.appendChild(ta);
+      ta.focus(); ta.select();
+      const ok = document.execCommand('copy');
+      document.body.removeChild(ta);
+      if (ok) {
+        showToast('已复制到剪贴板');
+        document.getElementById('lic-copy-btn').textContent = '✓ 已复制';
+        setTimeout(() => document.getElementById('lic-copy-btn').textContent = '复制', 2000);
+      } else {
+        showToast('复制失败，请手动复制');
+      }
+    } catch(e) {
+      showToast('复制失败: ' + e.message);
+    }
+  }
+  if (navigator.clipboard && window.isSecureContext) {
     navigator.clipboard.writeText(resultContent).then(() => {
       showToast('已复制到剪贴板');
-      document.getElementById('copy-btn').textContent = '✓ 已复制';
-      setTimeout(() => document.getElementById('copy-btn').textContent = '复制', 2000);
-    });
+      document.getElementById('lic-copy-btn').textContent = '✓ 已复制';
+      setTimeout(() => document.getElementById('lic-copy-btn').textContent = '复制', 2000);
+    }).catch(() => fallbackCopy());
   } else {
-    const ta = document.createElement('textarea');
-    ta.value = resultContent; ta.style.cssText = 'position:fixed;opacity:0';
-    document.body.appendChild(ta); ta.focus(); ta.select();
-    document.execCommand('copy'); document.body.removeChild(ta);
-    showToast('已复制到剪贴板');
+    fallbackCopy();
   }
 }
 
