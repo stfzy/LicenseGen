@@ -255,7 +255,16 @@ body {
 <body>
 
 <!-- Tab 导航 -->
- 
+<div class="tab-bar">
+  <button class="active" id="tab-btn-keygen" onclick="switchTab('keygen', this)">
+    <span class="tab-icon">🔑</span>
+    <span class="tab-label">授权码生成</span>
+  </button>
+  <button id="tab-btn-license" onclick="switchTab('license', this)">
+    <span class="tab-icon">📄</span>
+    <span class="tab-label">授权文件生成</span>
+  </button>
+</div>
 
 <!-- Tab 1: 授权码生成 -->
 <div class="tab-page active" id="tab-keygen">
@@ -411,7 +420,14 @@ body {
 </div>
 
 <script>
- 
+// ════ Tab 切换 ════════════════════════════════════════════
+function switchTab(name, btn) {
+  document.querySelectorAll('.tab-page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-bar button').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  btn.classList.add('active');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
 
 
 // ════ 公共工具函数 ════════════════════════════════════════
@@ -793,7 +809,67 @@ function signData(dataBase64) {
 }
 
 // ── 生成 ──────────────────────────────────────────────────
- 
+function lic_generate() {
+  if (!window._requestFields) {
+    showToast('请先导入申请文件'); return;
+  }
+
+  // 收集表单
+  const companyName = document.getElementById('company_name').value.trim();
+  const companyAddr = document.getElementById('company_addr').value.trim();
+  const contact     = document.getElementById('contact').value.trim();
+  const email       = document.getElementById('email').value.trim();
+  const machineName = document.getElementById('machine_name').value.trim();
+  const licenseId2  = document.getElementById('license_id2').value.trim();
+
+  const requestFields = Object.assign({}, window._requestFields, {
+    Company:     companyAddr ? companyName + '\n' + companyAddr : companyName,
+    Contact:     contact,
+    Email:       email,
+    MachineName: machineName,
+    License_ID2: licenseId2,
+  });
+
+  const limitsFields = {
+    ExpirationDate: document.getElementById('expiration').value.trim(),
+    MaxStartups:    document.getElementById('max_startups').value.trim(),
+    MaxUpTime:      document.getElementById('max_uptime').value.trim(),
+  };
+
+  const template = TEMPLATES[licenseType];
+  if (!template) { showToast('未知权限类型'); return; }
+
+  // 显示loading（forge RSA4096签名需要约1-2秒）
+  document.getElementById('loading').classList.add('show');
+  document.getElementById('gen-btn').disabled = true;
+
+  // 异步执行避免阻塞UI
+  setTimeout(() => {
+    try {
+      const xmlContent = updateLicenseXml(template, requestFields, limitsFields);
+      const dataB64    = btoa(unescape(encodeURIComponent(xmlContent)));
+      const sig        = signData(dataB64);
+
+      resultContent = wrapBlock('INFOBLOCK', xmlContent)
+                    + wrapBlock('DATABLOCK', dataB64)
+                    + wrapBlock('SIGNATURE', sig);
+
+      // 显示预览（前80字符）
+      document.getElementById('lic-result-preview').textContent = resultContent.substring(0, 120) + '...';
+      document.getElementById('lic-result-section').style.display = 'block';
+      document.getElementById('lic-copy-btn').textContent = '复制';
+      window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+      showToast('授权生成成功！');
+    } catch(err) {
+      showToast('生成失败: ' + err.message);
+      console.error(err);
+    } finally {
+      document.getElementById('loading').classList.remove('show');
+      document.getElementById('gen-btn').disabled = false;
+    }
+  }, 50);
+}
+
 function wrapBlock(tag, content) {
   return `-----BEGIN-${tag}\n${content}\n-----END-${tag}\n`;
 }
