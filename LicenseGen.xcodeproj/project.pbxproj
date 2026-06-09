@@ -11,6 +11,7 @@
 		B002 /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A002 /* ViewController.swift */; };
 		B003 /* index.html in Resources */ = {isa = PBXBuildFile; fileRef = A003 /* index.html */; };
 		B004 /* Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = A004 /* Info.plist */; };
+		B005 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A005 /* Assets.xcassets */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -19,6 +20,7 @@
 		A002 /* ViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewController.swift; sourceTree = "<group>"; };
 		A003 /* index.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; path = index.html; sourceTree = "<group>"; };
 		A004 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		A005 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -47,6 +49,7 @@
 				A002 /* ViewController.swift */,
 				A003 /* index.html */,
 				A004 /* Info.plist */,
+				A005 /* Assets.xcassets */,
 			);
 			path = LicenseGen;
 			sourceTree = "<group>";
@@ -119,6 +122,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				B003 /* index.html in Resources */,
+				B005 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
