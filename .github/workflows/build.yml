@@ -43,3 +43,9 @@ jobs:
         name: LicenseGen-IPA
         path: LicenseGen.ipa
         retention-days: 30
+    - name: Verify icons in app bundle
+      run: |
+        echo "=== App bundle contents ==="
+        ls build/Build/Products/Release-iphoneos/LicenseGen.app/
+        echo "=== Assets.car check ==="
+        ls build/Build/Products/Release-iphoneos/LicenseGen.app/Assets.car && echo "Assets.car EXISTS" || echo "Assets.car NOT FOUND"
