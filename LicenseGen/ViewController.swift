@@ -1,8 +1,18 @@
 import UIKit
 import WebKit
 
-class ViewController: UIViewController, WKNavigationDelegate, WKScriptMessageHandler {
+// 解决循环引用问题
+class WeakScriptMessageHandler: NSObject, WKScriptMessageHandler {
+    weak var delegate: WKScriptMessageHandler?
+    init(delegate: WKScriptMessageHandler) {
+        self.delegate = delegate
+    }
+    func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+        delegate?.userContentController(userContentController, didReceive: message)
+    }
+}
 
+class ViewController: UIViewController, WKNavigationDelegate, WKScriptMessageHandler {
     var webView: WKWebView!
 
     override func viewDidLoad() {
@@ -12,8 +22,8 @@ class ViewController: UIViewController, WKNavigationDelegate, WKScriptMessageHan
         let config = WKWebViewConfiguration()
         config.preferences.setValue(true, forKey: "allowFileAccessFromFileURLs")
 
-        // 注册 JS Bridge
-        config.userContentController.add(self, name: "downloadFile")
+        // 用弱引用方式注册，避免循环引用导致注册失败
+        config.userContentController.add(WeakScriptMessageHandler(delegate: self), name: "downloadFile")
 
         webView = WKWebView(frame: view.bounds, configuration: config)
         webView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
@@ -26,7 +36,6 @@ class ViewController: UIViewController, WKNavigationDelegate, WKScriptMessageHan
         }
     }
 
-    // 接收 JS 消息
     func userContentController(_ userContentController: WKUserContentController,
                                 didReceive message: WKScriptMessage) {
         guard message.name == "downloadFile",
@@ -34,22 +43,19 @@ class ViewController: UIViewController, WKNavigationDelegate, WKScriptMessageHan
               let content = body["content"],
               let filename = body["filename"] else { return }
 
-        // 写到临时目录
         let tmpDir = FileManager.default.temporaryDirectory
         let fileURL = tmpDir.appendingPathComponent(filename)
 
         do {
             try content.write(to: fileURL, atomically: true, encoding: .utf8)
         } catch {
-            // 写文件失败，通知 JS
-            webView.evaluateJavaScript("showToast('文件写入失败: \(error.localizedDescription)')")
+            let msg = error.localizedDescription.replacingOccurrences(of: "'", with: "\\'")
+            webView.evaluateJavaScript("showToast('\(msg)')")
             return
         }
 
-        // 弹出系统分享面板
         DispatchQueue.main.async {
             let ac = UIActivityViewController(activityItems: [fileURL], applicationActivities: nil)
-            // iPad 需要指定 sourceView，iPhone 上无效但不影响
             if let popover = ac.popoverPresentationController {
                 popover.sourceView = self.view
                 popover.sourceRect = CGRect(
